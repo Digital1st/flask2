@@ -1,17 +1,20 @@
 import os
+import logging
 from flask import Flask, render_template, request, redirect, url_for
 import psycopg
 
 app = Flask(__name__)
 
+logging.basicConfig(level=logging.INFO)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_conn():
     if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set. Configure your Render Postgres connection string.")
+        raise RuntimeError("DATABASE_URL is not set")
     return psycopg.connect(DATABASE_URL)
 
 def init_db():
+    app.logger.info("Initializing database...")
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -22,10 +25,12 @@ def init_db():
                 );
             """)
         conn.commit()
+    app.logger.info("Database initialized")
 
 @app.route("/")
 def index():
     search = request.args.get("search", "").strip()
+    app.logger.info("Loading index page. search=%s", search)
 
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -43,13 +48,15 @@ def index():
 @app.route("/add", methods=["POST"])
 def add_student():
     name = request.form.get("name", "").strip()
-    mark = request.form.get("mark", "").strip()
+    mark_raw = request.form.get("mark", "").strip()
 
-    if not name or not mark.isdigit():
+    if not name or not mark_raw.isdigit():
+        app.logger.warning("Invalid add request: name=%r mark=%r", name, mark_raw)
         return redirect(url_for("index"))
 
-    mark = int(mark)
-    if mark < 0 or mark > 100:
+    mark = int(mark_raw)
+    if not 0 <= mark <= 100:
+        app.logger.warning("Mark out of range: %s", mark)
         return redirect(url_for("index"))
 
     with get_conn() as conn:
@@ -66,13 +73,13 @@ def add_student():
 def edit_student(student_id):
     if request.method == "POST":
         name = request.form.get("name", "").strip()
-        mark = request.form.get("mark", "").strip()
+        mark_raw = request.form.get("mark", "").strip()
 
-        if not name or not mark.isdigit():
+        if not name or not mark_raw.isdigit():
             return redirect(url_for("edit_student", student_id=student_id))
 
-        mark = int(mark)
-        if mark < 0 or mark > 100:
+        mark = int(mark_raw)
+        if not 0 <= mark <= 100:
             return redirect(url_for("edit_student", student_id=student_id))
 
         with get_conn() as conn:
@@ -93,7 +100,8 @@ def edit_student(student_id):
             )
             student = cur.fetchone()
 
-    if not student:
+    if student is None:
+        app.logger.warning("Student not found: %s", student_id)
         return redirect(url_for("index"))
 
     return render_template("edit.html", student=student)
@@ -107,8 +115,9 @@ def delete_student(student_id):
 
     return redirect(url_for("index"))
 
-# initialize once on startup
-init_db()
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.exception("Unhandled exception: %s", e)
+    return "Application error. Check Render logs.", 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+init_db()
