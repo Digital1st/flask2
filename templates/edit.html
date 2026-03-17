@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Student</title>
+</head>
+<body>
+    <h1>Edit Student</h1>
+
+    <form method="post">
+        <input type="text" name="name" value="{{ student[1] }}" required>
+        <input type="number" name="mark" value="{{ student[2] }}" min="0" max="100" required>
+        <button type="submit">Update</button>
+    </form>
+
+    <p><a href="{{ url_for('index') }}">Back</a></p>
+</body>
+</html>
