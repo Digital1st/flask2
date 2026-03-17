@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Students</h1>
+
+<form method="post" action="/add">
+<input name="name" placeholder="Name">
+<input name="mark" placeholder="Mark">
+<button>Add</button>
+</form>
+
+<table border="1">
+<tr><th>ID</th><th>Name</th><th>Mark</th><th>Action</th></tr>
+{% for s in students %}
+<tr>
+<td>{{s[0]}}</td>
+<td>{{s[1]}}</td>
+<td>{{s[2]}}</td>
+<td>
+<a href="/edit/{{s[0]}}">Edit</a>
+<form action="/delete/{{s[0]}}" method="post" style="display:inline;">
+<button>Delete</button>
+</form>
+</td>
+</tr>
+{% endfor %}
+</table>
+
+</body>
+</html>
