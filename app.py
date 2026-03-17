@@ -40,7 +40,7 @@ def index():
                     (f"%{search}%",)
                 )
             else:
-                cur.execute("SELECT id, name, mark FROM students ORDER BY id DESC")
+                cur.execute("SELECT id, name, mark FROM students ORDER BY id ASC")
             students = cur.fetchall()
 
     return render_template("index.html", students=students, search=search)
